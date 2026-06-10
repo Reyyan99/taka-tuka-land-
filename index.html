@@ -333,30 +333,78 @@
     .fi-d4 { transition-delay: .4s; }
 
     /* ── RESPONSIVE ──────────────────────────────────────── */
+    #hero-sticky { background: #000; }
+
     @media (max-width: 1024px) {
-      .gallery-grid {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto;
-      }
-      .g-item:nth-child(1),
-      .g-item:nth-child(2),
-      .g-item:nth-child(3),
-      .g-item:nth-child(4),
-      .g-item:nth-child(5) { grid-column: auto; }
+      .gallery-grid { grid-template-columns: 1fr 1fr; grid-template-rows: auto; }
+      .g-item:nth-child(n) { grid-column: auto; }
       .about-inner { grid-template-columns: 1fr; gap: 40px; }
       .hours-wrap { grid-template-columns: 1fr; }
       .kontakt-wrap { grid-template-columns: 1fr; }
     }
+
     @media (max-width: 768px) {
-      nav { padding: 10px 20px; }
-      .nav-links { display: none; position: absolute; top: 76px; left: 0; right: 0; background: var(--blue-dark); flex-direction: column; padding: 20px; gap: 16px; }
+      /* Nav */
+      nav { padding: 10px 18px; }
+      .nav-links {
+        display: none; position: fixed;
+        top: 76px; left: 0; right: 0; bottom: 0;
+        background: rgba(13,111,163,.97);
+        backdrop-filter: blur(12px);
+        flex-direction: column; padding: 28px 24px; gap: 4px;
+        overflow-y: auto; z-index: 998;
+      }
       .nav-links.open { display: flex; }
+      .nav-links a { font-size: 1.1rem; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.12); }
+      .nav-links li:last-child a { border-bottom: none; }
       .hamburger { display: flex; }
-      section { padding: 70px 20px; }
+
+      /* Hero */
+      section { padding: 60px 18px; }
+      .hero-logo { width: min(240px, 72vw); margin-bottom: 12px; }
+      .hero-tagline { font-size: 1.25rem; }
+      .hero-sub { font-size: .88rem; margin-bottom: 22px; }
+      .hero-btns { flex-direction: column; align-items: center; gap: 10px; }
+      .btn-yellow, .btn-outline { width: 100%; max-width: 280px; text-align: center; padding: 13px 20px; font-size: .97rem; }
+
+      /* About */
+      .about-inner { grid-template-columns: 1fr; gap: 28px; }
+      .features { grid-template-columns: 1fr; gap: 14px; }
+      .about-image img { height: 230px; }
+
+      /* Gallery */
       .gallery-grid { grid-template-columns: 1fr; grid-template-rows: auto; }
-      .g-item { height: 240px; }
-      .price-grid { flex-direction: column; align-items: center; }
-      .price-card.best { transform: scale(1); }
+      .g-item { height: 210px; }
+      .g-item:nth-child(n) { grid-column: auto; }
+
+      /* Pricing */
+      .price-header { margin-bottom: 36px; }
+      .price-grid { flex-direction: column; align-items: stretch; }
+      .price-card, .price-card.best { transform: none; max-width: 100%; }
+      .price-num { font-size: 4rem; }
+
+      /* Hours */
+      .hours-wrap { grid-template-columns: 1fr; gap: 28px; }
+      .hours-row { flex-wrap: wrap; gap: 6px; padding: 13px 20px; font-size: .92rem; }
+      .hours-card-head { padding: 18px 20px; }
+
+      /* Contact */
+      .kontakt-wrap { grid-template-columns: 1fr; gap: 28px; }
+      .map-box { height: 220px; }
+
+      /* Titles */
+      .section-title { font-size: 1.85rem; }
+    }
+
+    @media (max-width: 420px) {
+      section { padding: 50px 14px; }
+      .section-title { font-size: 1.55rem; }
+      .hero-logo { width: min(200px, 68vw); }
+      .hero-tagline { font-size: 1.1rem; }
+      .feat { padding: 16px 14px; }
+      .price-card { padding: 34px 22px; }
+      .hours-row { font-size: .86rem; }
+      .k-icon { min-width: 44px; height: 44px; font-size: 1.5rem; }
     }
   </style>
 </head>
@@ -632,7 +680,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
 (function () {
-  /* ── Three.js setup ── */
+  /* ── Renderer ── */
   const canvas = document.getElementById('hero-canvas');
   const scene  = new THREE.Scene();
   let W = window.innerWidth, H = window.innerHeight;
@@ -641,10 +689,11 @@
   camera.position.z = 1;
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setSize(W, H);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(W, H);
+  renderer.setClearColor(0x000000, 1); /* black bg → no white edges */
 
-  /* ── Video element (NO crossOrigin — breaks local servers) ── */
+  /* ── Video ── */
   const video = document.createElement('video');
   video.src         = 'Video Taka Tuka land.mp4';
   video.muted       = true;
@@ -656,7 +705,23 @@
   tex.minFilter = THREE.LinearFilter;
   tex.magFilter = THREE.LinearFilter;
 
-  /* Cover-plane fills viewport exactly */
+  /* ── Cover-UV: crops video to fill screen without stretching ── */
+  function applyUVCover() {
+    const va = (video.videoWidth  || 16) / (video.videoHeight || 9);
+    const sa = W / H;
+    if (sa > va) {
+      /* screen wider  → crop top & bottom */
+      tex.repeat.set(1, va / sa);
+      tex.offset.set(0, (1 - va / sa) / 2);
+    } else {
+      /* screen taller → crop left & right */
+      tex.repeat.set(sa / va, 1);
+      tex.offset.set((1 - sa / va) / 2, 0);
+    }
+    tex.needsUpdate = true;
+  }
+
+  /* ── Plane always viewport-sized (cover handled via UV) ── */
   let plane;
   function buildPlane(w, h) {
     if (plane) { scene.remove(plane); plane.geometry.dispose(); plane.material.dispose(); }
@@ -665,19 +730,23 @@
       new THREE.MeshBasicMaterial({ map: tex })
     );
     scene.add(plane);
+    applyUVCover();
   }
   buildPlane(W, H);
 
-  /* ── Video init ── */
+  /* ── Video state ── */
   let duration  = 0;
   let isSeeking = false;
-  let wantTime  = 0;   // latest desired time from scroll
+  let wantTime  = 0;
+  let lastSeekAt = 0;           /* throttle: ms timestamp of last seek call */
+  const SEEK_THROTTLE = 40;     /* ms between seeks — balance quality & speed */
 
   video.addEventListener('loadedmetadata', () => {
     duration = video.duration;
+    applyUVCover();
   });
 
-  /* Warm up the decoder: play a tiny bit then pause at 0 */
+  /* Warm up decoder (muted → autoplay allowed everywhere) */
   video.addEventListener('canplay', () => {
     video.play()
       .then(() => { video.pause(); video.currentTime = 0; })
@@ -686,18 +755,24 @@
 
   video.load();
 
-  /* After every seek completes: update texture, then catch up if scroll moved again */
+  function doSeek(t) {
+    isSeeking = true;
+    lastSeekAt = performance.now();
+    /* fastSeek = nearest keyframe → much smoother on mobile */
+    if (video.fastSeek) video.fastSeek(t);
+    else video.currentTime = t;
+  }
+
   video.addEventListener('seeked', () => {
     tex.needsUpdate = true;
     isSeeking = false;
-    /* If scroll moved while seeking, jump to latest position */
-    if (Math.abs(video.currentTime - wantTime) > 0.04 && duration > 0) {
-      isSeeking = true;
-      video.currentTime = wantTime;
+    /* Catch up if scroll moved during this seek */
+    if (Math.abs(video.currentTime - wantTime) > 0.08 && duration > 0) {
+      doSeek(wantTime);
     }
   });
 
-  /* ── Scroll → video time ── */
+  /* ── Scroll → seek with throttle ── */
   const heroEl = document.getElementById('hero');
 
   window.addEventListener('scroll', () => {
@@ -706,9 +781,9 @@
 
     if (duration > 0) {
       wantTime = p * duration;
-      if (!isSeeking) {
-        isSeeking = true;
-        video.currentTime = wantTime;
+      const now = performance.now();
+      if (!isSeeking && now - lastSeekAt > SEEK_THROTTLE) {
+        doSeek(wantTime);
       }
     }
 
