@@ -68,10 +68,12 @@
     #hero-sticky { position: relative; width: 100%; height: 100%; }
     .hero-overlay {
       position: absolute; inset: 0; z-index: 1;
-      background: linear-gradient(160deg,
-        rgba(13,111,163,.55) 0%,
-        rgba(14,27,46,.35) 55%,
-        rgba(46,204,113,.25) 100%);
+      background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,.15) 0%,
+        rgba(0,0,0,.25) 40%,
+        rgba(0,0,0,.55) 100%
+      );
     }
     .hero-content {
       position: absolute; inset: 0; z-index: 2;
@@ -79,25 +81,31 @@
       align-items: center; justify-content: center;
       text-align: center; padding: 20px;
     }
-    .hero-logo {
-      width: min(440px, 88vw); margin-bottom: 18px;
-      filter: drop-shadow(0 4px 16px rgba(0,0,0,.5));
+    .hero-logo { display: none; }
+
+    .hero-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(3.5rem, 10vw, 7rem);
+      color: var(--yellow);
+      text-shadow: 4px 4px 0 rgba(0,0,0,.4), 0 0 40px rgba(0,0,0,.5);
+      line-height: 1;
+      margin-bottom: 14px;
       animation: float 3.5s ease-in-out infinite;
     }
-    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 
     .hero-tagline {
       font-family: 'Fredoka One', cursive;
-      font-size: clamp(1.5rem, 4vw, 2.6rem);
+      font-size: clamp(1.3rem, 3.5vw, 2.2rem);
       color: #fff;
-      text-shadow: 0 2px 12px rgba(0,0,0,.6);
+      text-shadow: 0 2px 16px rgba(0,0,0,.7);
       margin-bottom: 10px;
     }
     .hero-sub {
-      font-size: clamp(1rem, 2.2vw, 1.25rem);
+      font-size: clamp(.95rem, 2vw, 1.2rem);
       color: var(--yellow);
       font-weight: 700;
-      text-shadow: 0 2px 8px rgba(0,0,0,.5);
+      text-shadow: 0 2px 8px rgba(0,0,0,.6);
       margin-bottom: 36px;
     }
     .hero-btns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
@@ -347,8 +355,8 @@
 
       /* Hero */
       section { padding: 60px 18px; }
-      .hero-logo { width: min(240px, 72vw); margin-bottom: 12px; }
-      .hero-tagline { font-size: 1.25rem; }
+      .hero-title { font-size: clamp(2.8rem, 12vw, 4rem); }
+      .hero-tagline { font-size: 1.1rem; }
       .hero-sub { font-size: .88rem; margin-bottom: 22px; }
       .hero-btns { flex-direction: column; align-items: center; gap: 10px; }
       .btn-yellow, .btn-outline { width: 100%; max-width: 280px; text-align: center; padding: 13px 20px; font-size: .97rem; }
@@ -418,7 +426,7 @@
   <div id="hero-sticky">
     <div class="hero-overlay"></div>
     <div class="hero-content">
-      <img src="Logo.png" alt="Taka Tuka Land" class="hero-logo" />
+      <h1 class="hero-title">Taka Tuka Land</h1>
       <p class="hero-tagline">Wo Träume springen &amp; Herzen lachen!</p>
       <p class="hero-sub">🎪 Der größte Hüpfburg-Park für die ganze Familie 🎪</p>
       <div class="hero-btns">
