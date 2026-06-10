@@ -60,12 +60,12 @@
     .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; }
     .hamburger span { width: 26px; height: 3px; background: #fff; border-radius: 3px; transition: all .3s; }
 
-    /* ── HERO (Three.js scroll) ──────────────────────────── */
-    #hero { position: relative; height: 500vh; }
-    #hero-sticky {
-      position: sticky; top: 0; width: 100%; height: 100vh; overflow: hidden;
+    /* ── HERO ────────────────────────────────────────────── */
+    #hero {
+      position: relative; height: 100vh; overflow: hidden;
+      background: url('hero.jpg.png') center center / cover no-repeat;
     }
-    #hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    #hero-sticky { position: relative; width: 100%; height: 100%; }
     .hero-overlay {
       position: absolute; inset: 0; z-index: 1;
       background: linear-gradient(160deg,
@@ -118,20 +118,6 @@
     }
     .btn-outline:hover { background: #fff; color: var(--blue-dark); transform: translateY(-4px); }
 
-    .scroll-hint {
-      position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
-      z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px;
-      color: rgba(255,255,255,.8); font-size: .8rem; font-weight: 700; letter-spacing: 1px;
-      animation: scrollBounce 2s ease-in-out infinite;
-      transition: opacity .4s;
-    }
-    .scroll-hint .chevron {
-      width: 22px; height: 22px;
-      border-right: 3px solid rgba(255,255,255,.8);
-      border-bottom: 3px solid rgba(255,255,255,.8);
-      transform: rotate(45deg);
-    }
-    @keyframes scrollBounce { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-8px)} }
 
     /* ── SECTION SHARED ──────────────────────────────────── */
     section { padding: 100px 48px; }
@@ -430,7 +416,6 @@
 <!-- ── HERO ───────────────────────────────────────────── -->
 <section id="hero">
   <div id="hero-sticky">
-    <canvas id="hero-canvas"></canvas>
     <div class="hero-overlay"></div>
     <div class="hero-content">
       <img src="Logo.png" alt="Taka Tuka Land" class="hero-logo" />
@@ -440,10 +425,6 @@
         <a href="#preise" class="btn-yellow">🎟️ Tickets & Preise</a>
         <a href="#attraktionen" class="btn-outline">✨ Attraktionen entdecken</a>
       </div>
-    </div>
-    <div class="scroll-hint" id="scrollHint">
-      <span>SCROLL</span>
-      <div class="chevron"></div>
     </div>
   </div>
 </section>
@@ -676,145 +657,17 @@
   </p>
 </footer>
 
-<!-- ── THREE.JS ────────────────────────────────────────── -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
-(function () {
-  /* ── Renderer ── */
-  const canvas = document.getElementById('hero-canvas');
-  const scene  = new THREE.Scene();
-  let W = window.innerWidth, H = window.innerHeight;
-
-  const camera = new THREE.OrthographicCamera(-W/2, W/2, H/2, -H/2, 0.1, 100);
-  camera.position.z = 1;
-
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(W, H);
-  renderer.setClearColor(0x000000, 1); /* black bg → no white edges */
-
-  /* ── Video ── */
-  const video = document.createElement('video');
-  video.src         = 'Video Taka Tuka land.mp4';
-  video.muted       = true;
-  video.playsInline = true;
-  video.preload     = 'auto';
-  video.loop        = false;
-
-  const tex = new THREE.VideoTexture(video);
-  tex.minFilter = THREE.LinearFilter;
-  tex.magFilter = THREE.LinearFilter;
-
-  /* ── Cover-UV: crops video to fill screen without stretching ── */
-  function applyUVCover() {
-    const va = (video.videoWidth  || 16) / (video.videoHeight || 9);
-    const sa = W / H;
-    if (sa > va) {
-      /* screen wider  → crop top & bottom */
-      tex.repeat.set(1, va / sa);
-      tex.offset.set(0, (1 - va / sa) / 2);
-    } else {
-      /* screen taller → crop left & right */
-      tex.repeat.set(sa / va, 1);
-      tex.offset.set((1 - sa / va) / 2, 0);
-    }
-    tex.needsUpdate = true;
-  }
-
-  /* ── Plane always viewport-sized (cover handled via UV) ── */
-  let plane;
-  function buildPlane(w, h) {
-    if (plane) { scene.remove(plane); plane.geometry.dispose(); plane.material.dispose(); }
-    plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(w, h),
-      new THREE.MeshBasicMaterial({ map: tex })
-    );
-    scene.add(plane);
-    applyUVCover();
-  }
-  buildPlane(W, H);
-
-  /* ── Video state ── */
-  let duration  = 0;
-  let isSeeking = false;
-  let wantTime  = 0;
-  let lastSeekAt = 0;           /* throttle: ms timestamp of last seek call */
-  const SEEK_THROTTLE = 40;     /* ms between seeks — balance quality & speed */
-
-  video.addEventListener('loadedmetadata', () => {
-    duration = video.duration;
-    applyUVCover();
-  });
-
-  /* Warm up decoder (muted → autoplay allowed everywhere) */
-  video.addEventListener('canplay', () => {
-    video.play()
-      .then(() => { video.pause(); video.currentTime = 0; })
-      .catch(() => { video.currentTime = 0; });
-  }, { once: true });
-
-  video.load();
-
-  function doSeek(t) {
-    isSeeking = true;
-    lastSeekAt = performance.now();
-    /* fastSeek = nearest keyframe → much smoother on mobile */
-    if (video.fastSeek) video.fastSeek(t);
-    else video.currentTime = t;
-  }
-
-  video.addEventListener('seeked', () => {
-    tex.needsUpdate = true;
-    isSeeking = false;
-    /* Catch up if scroll moved during this seek */
-    if (Math.abs(video.currentTime - wantTime) > 0.08 && duration > 0) {
-      doSeek(wantTime);
-    }
-  });
-
-  /* ── Scroll → seek with throttle ── */
-  const heroEl = document.getElementById('hero');
-
-  window.addEventListener('scroll', () => {
-    const max = heroEl.offsetHeight - window.innerHeight;
-    const p   = Math.max(0, Math.min(window.scrollY / max, 1));
-
-    if (duration > 0) {
-      wantTime = p * duration;
-      const now = performance.now();
-      if (!isSeeking && now - lastSeekAt > SEEK_THROTTLE) {
-        doSeek(wantTime);
-      }
-    }
-
-    document.getElementById('scrollHint').style.opacity =
-      window.scrollY > 80 ? '0' : '1';
-  }, { passive: true });
-
-  /* ── Render loop ── */
-  function animate() {
-    requestAnimationFrame(animate);
-    tex.needsUpdate = true;
-    renderer.render(scene, camera);
-  }
-  animate();
-
-  /* ── Resize ── */
-  window.addEventListener('resize', () => {
-    W = window.innerWidth; H = window.innerHeight;
-    renderer.setSize(W, H);
-    camera.left = -W/2; camera.right  =  W/2;
-    camera.top  =  H/2; camera.bottom = -H/2;
-    camera.updateProjectionMatrix();
-    buildPlane(W, H);
-  });
-})();
-
-/* ── Scroll fade-in ── */
+/* Scroll fade-in */
 const obs = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
 }, { threshold: 0.12 });
 document.querySelectorAll('.fi').forEach(el => obs.observe(el));
+
+/* Hamburger */
+document.getElementById('hamburger').addEventListener('click', () => {
+  document.getElementById('navLinks').classList.toggle('open');
+});
 </script>
 </body>
 </html>
